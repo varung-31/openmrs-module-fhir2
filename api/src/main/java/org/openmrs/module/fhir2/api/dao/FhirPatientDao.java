@@ -13,18 +13,28 @@ import javax.validation.constraints.NotNull;
 
 import java.util.Collection;
 
+import ca.uhn.fhir.rest.api.SortSpec;
+import ca.uhn.fhir.rest.param.DateOrListParam;
+import ca.uhn.fhir.rest.param.DateRangeParam;
+import ca.uhn.fhir.rest.param.StringOrListParam;
+import ca.uhn.fhir.rest.param.TokenOrListParam;
 import org.openmrs.Patient;
 import org.openmrs.PatientIdentifierType;
 
 public interface FhirPatientDao {
-	
+
 	Patient getPatientByUuid(@NotNull String uuid);
-	
+
 	PatientIdentifierType getPatientIdentifierTypeByNameOrUuid(String name, String uuid);
-	
+
 	Collection<Patient> findPatientsByName(String name);
-	
+
 	Collection<Patient> findPatientsByGivenName(String given);
-	
+
 	Collection<Patient> findPatientsByFamilyName(String family);
+
+	Collection<Patient> searchForPatients(StringOrListParam name, StringOrListParam given, StringOrListParam family,
+			TokenOrListParam identifier, TokenOrListParam gender, DateRangeParam birthDate, DateRangeParam deathDate,
+			TokenOrListParam deceased, StringOrListParam city, StringOrListParam state,
+			StringOrListParam postalCode, SortSpec sort);
 }
