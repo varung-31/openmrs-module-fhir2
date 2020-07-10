@@ -235,4 +235,8 @@ public class FhirConstants {
 	public static final String ID_PROPERTY = "_id.property";
 	
 	public static final String LAST_UPDATED_PROPERTY = "_lastUpdated.property";
+	
+	public static final String INCLUDE_SEARCH_HANDLER = "_include.search.handler";
+	
+	public static final String INCLUDE_PART_OF_PARAM = "partof";
 }
