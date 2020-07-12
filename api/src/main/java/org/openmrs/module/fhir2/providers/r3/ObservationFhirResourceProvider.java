@@ -11,12 +11,15 @@ package org.openmrs.module.fhir2.providers.r3;
 
 import javax.validation.constraints.NotNull;
 
+import java.util.HashSet;
 import java.util.List;
 
+import ca.uhn.fhir.model.api.Include;
 import ca.uhn.fhir.rest.annotation.Create;
 import ca.uhn.fhir.rest.annotation.Delete;
 import ca.uhn.fhir.rest.annotation.History;
 import ca.uhn.fhir.rest.annotation.IdParam;
+import ca.uhn.fhir.rest.annotation.IncludeParam;
 import ca.uhn.fhir.rest.annotation.OptionalParam;
 import ca.uhn.fhir.rest.annotation.Read;
 import ca.uhn.fhir.rest.annotation.ResourceParam;
@@ -49,6 +52,7 @@ import org.openmrs.module.fhir2.providers.util.FhirProviderUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
+import org.springframework.util.CollectionUtils;
 
 @Component("observationFhirR3ResourceProvider")
 @Qualifier("fhirR3Resources")
@@ -128,12 +132,20 @@ public class ObservationFhirResourceProvider implements IResourceProvider {
 	        @OptionalParam(name = Observation.SP_CODE) TokenAndListParam code,
 	        @OptionalParam(name = Observation.SP_CATEGORY) TokenAndListParam category,
 	        @OptionalParam(name = Observation.SP_RES_ID) TokenAndListParam id,
-	        @OptionalParam(name = "_lastUpdated") DateRangeParam lastUpdated, @Sort SortSpec sort) {
+	        @OptionalParam(name = "_lastUpdated") DateRangeParam lastUpdated, @Sort SortSpec sort,
+	        @IncludeParam(allow = { "Observation:encounter", "Observation:patient",
+	                "Observation:related-type" }) HashSet<Include> theIncludes) {
 		if (patientParam != null) {
 			patientReference = patientParam;
 		}
+		
+		if (CollectionUtils.isEmpty(theIncludes)) {
+			theIncludes = null;
+		}
+		
 		return observationService.searchForObservations(encounterReference, patientReference, hasMemberReference,
-		    valueConcept, valueDateParam, valueQuantityParam, valueStringParam, date, code, category, id, lastUpdated, sort);
+		    valueConcept, valueDateParam, valueQuantityParam, valueStringParam, date, code, category, id, lastUpdated, sort,
+		    theIncludes);
 	}
 	
 }

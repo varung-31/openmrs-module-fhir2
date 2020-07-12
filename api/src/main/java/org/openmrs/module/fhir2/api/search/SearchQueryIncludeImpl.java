@@ -9,6 +9,7 @@
  */
 package org.openmrs.module.fhir2.api.search;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
@@ -18,9 +19,13 @@ import ca.uhn.fhir.model.api.Include;
 import lombok.NoArgsConstructor;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Location;
+import org.hl7.fhir.r4.model.Observation;
 import org.hl7.fhir.r4.model.Reference;
 import org.openmrs.module.fhir2.FhirConstants;
+import org.openmrs.module.fhir2.api.FhirEncounterService;
 import org.openmrs.module.fhir2.api.FhirLocationService;
+import org.openmrs.module.fhir2.api.FhirObservationService;
+import org.openmrs.module.fhir2.api.FhirPatientService;
 import org.openmrs.module.fhir2.api.search.param.PropParam;
 import org.openmrs.module.fhir2.api.search.param.SearchParameterMap;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,6 +38,15 @@ public class SearchQueryIncludeImpl<U extends IBaseResource> implements SearchQu
 	
 	@Autowired
 	private FhirLocationService locationService;
+	
+	@Autowired
+	private FhirObservationService observationService;
+	
+	@Autowired
+	private FhirEncounterService encounterService;
+	
+	@Autowired
+	private FhirPatientService patientService;
 	
 	@Override
 	@SuppressWarnings("unchecked")
@@ -51,10 +65,71 @@ public class SearchQueryIncludeImpl<U extends IBaseResource> implements SearchQu
 				case FhirConstants.INCLUDE_PART_OF_PARAM:
 					includedResourcesSet.addAll(handlePartofInclude(resourceList, includeParam.getParamType()));
 					break;
+				case FhirConstants.INCLUDE_ENCOUNTER_PARAM:
+					includedResourcesSet.addAll(handleEncounterInclude(resourceList, includeParam.getParamType()));
+					break;
+				case FhirConstants.INCLUDE_PATIENT_PARAM:
+					includedResourcesSet.addAll(handlePatientInclude(resourceList, includeParam.getParamType()));
+					break;
+				case FhirConstants.INCLUDE_HAS_MEMBER_PARAM:
+				case FhirConstants.INCLUDE_RELATED_TYPE_PARAM:
+					includedResourcesSet.addAll(handleHasMemberInclude(resourceList, includeParam.getParamType()));
+					break;
 			}
 		});
 		
 		return includedResourcesSet;
+	}
+	
+	private Set<IBaseResource> handleHasMemberInclude(List<U> resourceList, String paramType) {
+		Set<IBaseResource> includedResources = new HashSet<>();
+		
+		switch (paramType) {
+			case FhirConstants.OBSERVATION:
+				Set<String> uniqueObservationUUIDs = new HashSet<>();
+				resourceList.forEach(resource -> uniqueObservationUUIDs
+				        .addAll(getIdsFromReferenceList(((Observation) resource).getHasMember())));
+				
+				uniqueObservationUUIDs.removeIf(Objects::isNull);
+				uniqueObservationUUIDs.forEach(uuid -> includedResources.add(observationService.get(uuid)));
+				break;
+		}
+		
+		return includedResources;
+	}
+	
+	private Set<IBaseResource> handlePatientInclude(List<U> resourceList, String paramType) {
+		Set<IBaseResource> includedResources = new HashSet<>();
+		
+		switch (paramType) {
+			case FhirConstants.OBSERVATION:
+				Set<String> uniquePatientUUIDs = new HashSet<>();
+				resourceList.forEach(
+				    resource -> uniquePatientUUIDs.add(getIdFromReference(((Observation) resource).getSubject())));
+				
+				uniquePatientUUIDs.removeIf(Objects::isNull);
+				uniquePatientUUIDs.forEach(uuid -> includedResources.add(patientService.get(uuid)));
+				break;
+		}
+		
+		return includedResources;
+	}
+	
+	private Set<IBaseResource> handleEncounterInclude(List<U> resourceList, String paramType) {
+		Set<IBaseResource> includedResources = new HashSet<>();
+		
+		switch (paramType) {
+			case FhirConstants.OBSERVATION:
+				Set<String> uniqueEncounterUUIDs = new HashSet<>();
+				resourceList.forEach(
+				    resource -> uniqueEncounterUUIDs.add(getIdFromReference(((Observation) resource).getEncounter())));
+				
+				uniqueEncounterUUIDs.removeIf(Objects::isNull);
+				uniqueEncounterUUIDs.forEach(uuid -> includedResources.add(encounterService.get(uuid)));
+				break;
+		}
+		
+		return includedResources;
 	}
 	
 	private Set<IBaseResource> handlePartofInclude(List<U> resourceList, String paramType) {
@@ -72,6 +147,16 @@ public class SearchQueryIncludeImpl<U extends IBaseResource> implements SearchQu
 		}
 		
 		return includedResources;
+	}
+	
+	private static List<String> getIdsFromReferenceList(List<Reference> referenceList) {
+		List<String> idList = new ArrayList<>();
+		
+		if (referenceList != null) {
+			referenceList.forEach(reference -> idList.add(getIdFromReference(reference)));
+		}
+		
+		return idList;
 	}
 	
 	private static String getIdFromReference(Reference reference) {

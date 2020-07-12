@@ -10,6 +10,7 @@
 package org.openmrs.module.fhir2.api.search;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.everyItem;
@@ -18,13 +19,18 @@ import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasProperty;
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.instanceOf;
+import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.startsWith;
 
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import ca.uhn.fhir.model.api.Include;
 import ca.uhn.fhir.rest.api.SortOrderEnum;
 import ca.uhn.fhir.rest.api.SortSpec;
 import ca.uhn.fhir.rest.api.server.IBundleProvider;
@@ -44,6 +50,7 @@ import ca.uhn.fhir.rest.param.TokenOrListParam;
 import ca.uhn.fhir.rest.param.TokenParam;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.instance.model.api.IIdType;
+import org.hl7.fhir.r4.model.Encounter;
 import org.hl7.fhir.r4.model.Observation;
 import org.hl7.fhir.r4.model.Patient;
 import org.junit.Before;
@@ -1262,6 +1269,129 @@ public class ObservationSearchQueryImplTest extends BaseModuleContextSensitiveTe
 		
 		assertThat(results, notNullValue());
 		assertThat(resultList, empty());
+	}
+	
+	@Test
+	public void searchForObs_shouldAddNotNullEncounterToReturnedResults() {
+		TokenAndListParam uuid = new TokenAndListParam().addAnd(new TokenParam(OBS_UUID));
+		HashSet<Include> theIncludes = new HashSet<>();
+		Include include = new Include("Observation:encounter");
+		theIncludes.add(include);
+		
+		SearchParameterMap theParams = new SearchParameterMap()
+		        .addParameter(FhirConstants.COMMON_SEARCH_HANDLER, FhirConstants.ID_PROPERTY, uuid)
+		        .addParameter(FhirConstants.INCLUDE_SEARCH_HANDLER, theIncludes);
+		
+		IBundleProvider results = search(theParams);
+		assertThat(results.size(), equalTo(1));
+		
+		List<IBaseResource> resultList = get(results);
+		
+		assertThat(results, notNullValue());
+		assertThat(resultList.size(), equalTo(2)); // included resource added as part of the result list
+		
+		Observation returnedObservation = (Observation) resultList.iterator().next();
+		assertThat(resultList, hasItem(allOf(is(instanceOf(Encounter.class)),
+		    hasProperty("id", equalTo(returnedObservation.getEncounter().getReferenceElement().getIdPart())))));
+	}
+	
+	@Test
+	public void searchForObs_shouldAddNotNullPatientToReturnedResults() {
+		ReferenceAndListParam patientReference = new ReferenceAndListParam().addAnd(new ReferenceOrListParam()
+		        .add(new ReferenceParam().setValue(PATIENT_IDENTIFIER).setChain(Patient.SP_IDENTIFIER)));
+		HashSet<Include> theIncludes = new HashSet<>();
+		Include include = new Include("Observation:patient");
+		theIncludes.add(include);
+		
+		SearchParameterMap theParams = new SearchParameterMap()
+		        .addParameter(FhirConstants.PATIENT_REFERENCE_SEARCH_HANDLER, patientReference)
+		        .addParameter(FhirConstants.INCLUDE_SEARCH_HANDLER, theIncludes);
+		
+		IBundleProvider results = search(theParams);
+		assertThat(results.size(), equalTo(22));
+		
+		List<IBaseResource> resultList = get(results);
+		
+		assertThat(results, notNullValue());
+		assertThat(resultList.size(), equalTo(11)); // 10 paging + 1 included patient resource
+		
+		Observation returnedObservation = (Observation) resultList.iterator().next();
+		assertThat(resultList, hasItem(allOf(is(instanceOf(Patient.class)),
+		    hasProperty("id", equalTo(returnedObservation.getSubject().getReferenceElement().getIdPart())))));
+	}
+	
+	@Test
+	public void searchForObs_shouldAddNotNullGroupMembersToReturnedResults() {
+		TokenAndListParam uuid = new TokenAndListParam().addAnd(new TokenParam(OBS_GROUP_UUID));
+		HashSet<Include> theIncludes = new HashSet<>();
+		Include include = new Include("Observation:has-member");
+		theIncludes.add(include);
+		
+		SearchParameterMap theParams = new SearchParameterMap()
+		        .addParameter(FhirConstants.COMMON_SEARCH_HANDLER, FhirConstants.ID_PROPERTY, uuid)
+		        .addParameter(FhirConstants.INCLUDE_SEARCH_HANDLER, theIncludes);
+		
+		IBundleProvider results = search(theParams);
+		assertThat(results.size(), equalTo(1));
+		
+		List<IBaseResource> resultList = get(results);
+		
+		assertThat(results, notNullValue());
+		assertThat(resultList.size(), equalTo(2)); // included resource added as part of the result list
+		
+		Observation returnedObservation = (Observation) resultList.iterator().next();
+		assertThat(resultList, hasItem(allOf(is(instanceOf(Observation.class)),
+		    hasProperty("id", equalTo(returnedObservation.getHasMemberFirstRep().getReferenceElement().getIdPart())))));
+	}
+	
+	@Test
+	public void searchForObs_shouldAddNotNullGroupMembersToReturnedResultsR3() {
+		TokenAndListParam uuid = new TokenAndListParam().addAnd(new TokenParam(OBS_GROUP_UUID));
+		HashSet<Include> theIncludes = new HashSet<>();
+		Include include = new Include("Observation:related-type");
+		theIncludes.add(include);
+		
+		SearchParameterMap theParams = new SearchParameterMap()
+		        .addParameter(FhirConstants.COMMON_SEARCH_HANDLER, FhirConstants.ID_PROPERTY, uuid)
+		        .addParameter(FhirConstants.INCLUDE_SEARCH_HANDLER, theIncludes);
+		
+		IBundleProvider results = search(theParams);
+		assertThat(results.size(), equalTo(1));
+		
+		List<IBaseResource> resultList = get(results);
+		
+		assertThat(results, notNullValue());
+		assertThat(resultList.size(), equalTo(2)); // included resource added as part of the result list
+		
+		Observation returnedObservation = (Observation) resultList.iterator().next();
+		assertThat(resultList, hasItem(allOf(is(instanceOf(Observation.class)),
+		    hasProperty("id", equalTo(returnedObservation.getHasMemberFirstRep().getReferenceElement().getIdPart())))));
+	}
+	
+	@Test
+	public void searchForObs_shouldHandleMultipleIncludes() {
+		TokenAndListParam uuid = new TokenAndListParam().addAnd(new TokenParam(OBS_GROUP_UUID));
+		Include includeGroupMembers = new Include("Observation:related-type");
+		Include includeEncounter = new Include("Observation:encounter");
+		HashSet<Include> theIncludes = new HashSet<>(Arrays.asList(includeEncounter, includeGroupMembers));
+		
+		SearchParameterMap theParams = new SearchParameterMap()
+		        .addParameter(FhirConstants.COMMON_SEARCH_HANDLER, FhirConstants.ID_PROPERTY, uuid)
+		        .addParameter(FhirConstants.INCLUDE_SEARCH_HANDLER, theIncludes);
+		
+		IBundleProvider results = search(theParams);
+		assertThat(results.size(), equalTo(1));
+		
+		List<IBaseResource> resultList = get(results);
+		
+		assertThat(results, notNullValue());
+		assertThat(resultList.size(), equalTo(3)); // included resources (encounter + group members) added as part of the result list
+		
+		Observation returnedObservation = (Observation) resultList.iterator().next();
+		assertThat(resultList, hasItem(allOf(is(instanceOf(Observation.class)),
+		    hasProperty("id", equalTo(returnedObservation.getHasMemberFirstRep().getReferenceElement().getIdPart())))));
+		assertThat(resultList, hasItem(allOf(is(instanceOf(Encounter.class)),
+		    hasProperty("id", equalTo(returnedObservation.getEncounter().getReferenceElement().getIdPart())))));
 	}
 	
 	private IBundleProvider search(SearchParameterMap theParams) {
