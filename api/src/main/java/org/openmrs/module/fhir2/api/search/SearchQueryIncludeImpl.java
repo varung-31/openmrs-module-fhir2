@@ -18,6 +18,7 @@ import java.util.Set;
 import ca.uhn.fhir.model.api.Include;
 import lombok.NoArgsConstructor;
 import org.hl7.fhir.instance.model.api.IBaseResource;
+import org.hl7.fhir.r4.model.AllergyIntolerance;
 import org.hl7.fhir.r4.model.Location;
 import org.hl7.fhir.r4.model.Observation;
 import org.hl7.fhir.r4.model.Reference;
@@ -100,17 +101,21 @@ public class SearchQueryIncludeImpl<U extends IBaseResource> implements SearchQu
 	
 	private Set<IBaseResource> handlePatientInclude(List<U> resourceList, String paramType) {
 		Set<IBaseResource> includedResources = new HashSet<>();
+		Set<String> uniquePatientUUIDs = new HashSet<>();
 		
 		switch (paramType) {
 			case FhirConstants.OBSERVATION:
-				Set<String> uniquePatientUUIDs = new HashSet<>();
 				resourceList.forEach(
 				    resource -> uniquePatientUUIDs.add(getIdFromReference(((Observation) resource).getSubject())));
-				
-				uniquePatientUUIDs.removeIf(Objects::isNull);
-				uniquePatientUUIDs.forEach(uuid -> includedResources.add(patientService.get(uuid)));
+				break;
+			case FhirConstants.ALLERGY_INTOLERANCE:
+				resourceList.forEach(
+				    resource -> uniquePatientUUIDs.add(getIdFromReference(((AllergyIntolerance) resource).getPatient())));
 				break;
 		}
+		
+		uniquePatientUUIDs.removeIf(Objects::isNull);
+		uniquePatientUUIDs.forEach(uuid -> includedResources.add(patientService.get(uuid)));
 		
 		return includedResources;
 	}

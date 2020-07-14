@@ -11,11 +11,14 @@ package org.openmrs.module.fhir2.providers.r3;
 
 import javax.validation.constraints.NotNull;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import ca.uhn.fhir.model.api.Include;
 import ca.uhn.fhir.rest.annotation.History;
 import ca.uhn.fhir.rest.annotation.IdParam;
+import ca.uhn.fhir.rest.annotation.IncludeParam;
 import ca.uhn.fhir.rest.annotation.OptionalParam;
 import ca.uhn.fhir.rest.annotation.Read;
 import ca.uhn.fhir.rest.annotation.Search;
@@ -29,6 +32,7 @@ import ca.uhn.fhir.rest.server.IResourceProvider;
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
 import lombok.AccessLevel;
 import lombok.Setter;
+import org.apache.commons.collections.CollectionUtils;
 import org.hl7.fhir.convertors.conv30_40.AllergyIntolerance30_40;
 import org.hl7.fhir.convertors.conv30_40.Provenance30_40;
 import org.hl7.fhir.dstu3.model.AllergyIntolerance;
@@ -94,11 +98,17 @@ public class AllergyIntoleranceFhirResourceProvider implements IResourceProvider
 	        @OptionalParam(name = AllergyIntolerance.SP_MANIFESTATION) TokenAndListParam manifestationCode,
 	        @OptionalParam(name = AllergyIntolerance.SP_CLINICAL_STATUS) TokenAndListParam clinicalStatus,
 	        @OptionalParam(name = AllergyIntolerance.SP_RES_ID) TokenAndListParam id,
-	        @OptionalParam(name = "_lastUpdated") DateRangeParam lastUpdated, @Sort SortSpec sort) {
+	        @OptionalParam(name = "_lastUpdated") DateRangeParam lastUpdated, @Sort SortSpec sort,
+	        @IncludeParam(allow = { "AllergyIntolerance:patient" }) HashSet<Include> theIncludes) {
 		if (patientReference == null) {
 			patientReference = subjectReference;
 		}
+		
+		if (CollectionUtils.isEmpty(theIncludes)) {
+			theIncludes = null;
+		}
+		
 		return allergyIntoleranceService.searchForAllergies(patientReference, category, allergen, severity,
-		    manifestationCode, clinicalStatus, id, lastUpdated, sort);
+		    manifestationCode, clinicalStatus, id, lastUpdated, sort, theIncludes);
 	}
 }
