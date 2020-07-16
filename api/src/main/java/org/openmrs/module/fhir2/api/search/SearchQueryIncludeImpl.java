@@ -19,6 +19,7 @@ import ca.uhn.fhir.model.api.Include;
 import lombok.NoArgsConstructor;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.AllergyIntolerance;
+import org.hl7.fhir.r4.model.DiagnosticReport;
 import org.hl7.fhir.r4.model.Location;
 import org.hl7.fhir.r4.model.Observation;
 import org.hl7.fhir.r4.model.Reference;
@@ -73,8 +74,9 @@ public class SearchQueryIncludeImpl<U extends IBaseResource> implements SearchQu
 					includedResourcesSet.addAll(handlePatientInclude(resourceList, includeParam.getParamType()));
 					break;
 				case FhirConstants.INCLUDE_HAS_MEMBER_PARAM:
+				case FhirConstants.INCLUDE_RESULT_PARAM:
 				case FhirConstants.INCLUDE_RELATED_TYPE_PARAM:
-					includedResourcesSet.addAll(handleHasMemberInclude(resourceList, includeParam.getParamType()));
+					includedResourcesSet.addAll(handleGroupMemberInclude(resourceList, includeParam.getParamType()));
 					break;
 			}
 		});
@@ -82,20 +84,24 @@ public class SearchQueryIncludeImpl<U extends IBaseResource> implements SearchQu
 		return includedResourcesSet;
 	}
 	
-	private Set<IBaseResource> handleHasMemberInclude(List<U> resourceList, String paramType) {
+	private Set<IBaseResource> handleGroupMemberInclude(List<U> resourceList, String paramType) {
 		Set<IBaseResource> includedResources = new HashSet<>();
-		
+		Set<String> uniqueObsUUIDs = new HashSet<>();
+
 		switch (paramType) {
 			case FhirConstants.OBSERVATION:
-				Set<String> uniqueObservationUUIDs = new HashSet<>();
-				resourceList.forEach(resource -> uniqueObservationUUIDs
+				resourceList.forEach(resource -> uniqueObsUUIDs
 				        .addAll(getIdsFromReferenceList(((Observation) resource).getHasMember())));
-				
-				uniqueObservationUUIDs.removeIf(Objects::isNull);
-				uniqueObservationUUIDs.forEach(uuid -> includedResources.add(observationService.get(uuid)));
+				break;
+			case FhirConstants.DIAGNOSTIC_REPORT:
+				resourceList.forEach(resource -> uniqueObsUUIDs
+						.addAll(getIdsFromReferenceList(((DiagnosticReport) resource).getResult())));
 				break;
 		}
-		
+
+		uniqueObsUUIDs.removeIf(Objects::isNull);
+		uniqueObsUUIDs.forEach(uuid -> includedResources.add(observationService.get(uuid)));
+
 		return includedResources;
 	}
 	
@@ -112,6 +118,9 @@ public class SearchQueryIncludeImpl<U extends IBaseResource> implements SearchQu
 				resourceList.forEach(
 				    resource -> uniquePatientUUIDs.add(getIdFromReference(((AllergyIntolerance) resource).getPatient())));
 				break;
+			case FhirConstants.DIAGNOSTIC_REPORT:
+				resourceList.forEach(resource -> uniquePatientUUIDs.add(getIdFromReference(((DiagnosticReport) resource).getSubject())));
+				break;
 		}
 		
 		uniquePatientUUIDs.removeIf(Objects::isNull);
@@ -122,17 +131,20 @@ public class SearchQueryIncludeImpl<U extends IBaseResource> implements SearchQu
 	
 	private Set<IBaseResource> handleEncounterInclude(List<U> resourceList, String paramType) {
 		Set<IBaseResource> includedResources = new HashSet<>();
-		
+		Set<String> uniqueEncounterUUIDs = new HashSet<>();
+
 		switch (paramType) {
 			case FhirConstants.OBSERVATION:
-				Set<String> uniqueEncounterUUIDs = new HashSet<>();
 				resourceList.forEach(
 				    resource -> uniqueEncounterUUIDs.add(getIdFromReference(((Observation) resource).getEncounter())));
-				
-				uniqueEncounterUUIDs.removeIf(Objects::isNull);
-				uniqueEncounterUUIDs.forEach(uuid -> includedResources.add(encounterService.get(uuid)));
+				break;
+			case FhirConstants.DIAGNOSTIC_REPORT:
+				resourceList.forEach(resource -> uniqueEncounterUUIDs.add(getIdFromReference(((DiagnosticReport) resource).getEncounter())));
 				break;
 		}
+
+		uniqueEncounterUUIDs.removeIf(Objects::isNull);
+		uniqueEncounterUUIDs.forEach(uuid -> includedResources.add(encounterService.get(uuid)));
 		
 		return includedResources;
 	}

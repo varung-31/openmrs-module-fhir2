@@ -197,7 +197,7 @@ public class FhirDiagnosticReportServiceImplTest {
 		when(searchQuery.getQueryResults(any(), any(), any(), any()))
 		        .thenReturn(new SearchQueryBundleProvider<>(theParams, dao, translator, searchQueryInclude));
 		
-		IBundleProvider results = service.searchForDiagnosticReports(null, null, null, null, null, null, null);
+		IBundleProvider results = service.searchForDiagnosticReports(null, null, null, null, null, null, null, null);
 		
 		List<IBaseResource> resultList = get(results);
 		

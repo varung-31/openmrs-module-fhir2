@@ -11,9 +11,13 @@ package org.openmrs.module.fhir2.providers.r4;
 
 import javax.validation.constraints.NotNull;
 
+import java.util.HashSet;
+
+import ca.uhn.fhir.model.api.Include;
 import ca.uhn.fhir.rest.annotation.Create;
 import ca.uhn.fhir.rest.annotation.Delete;
 import ca.uhn.fhir.rest.annotation.IdParam;
+import ca.uhn.fhir.rest.annotation.IncludeParam;
 import ca.uhn.fhir.rest.annotation.OptionalParam;
 import ca.uhn.fhir.rest.annotation.Read;
 import ca.uhn.fhir.rest.annotation.ResourceParam;
@@ -30,6 +34,7 @@ import ca.uhn.fhir.rest.server.IResourceProvider;
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
 import lombok.AccessLevel;
 import lombok.Setter;
+import org.apache.commons.collections.CollectionUtils;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.DiagnosticReport;
 import org.hl7.fhir.r4.model.Encounter;
@@ -103,11 +108,17 @@ public class DiagnosticReportFhirResourceProvider implements IResourceProvider {
 	        @OptionalParam(name = DiagnosticReport.SP_ISSUED) DateRangeParam issueDate,
 	        @OptionalParam(name = DiagnosticReport.SP_CODE) TokenAndListParam code,
 	        @OptionalParam(name = DiagnosticReport.SP_RES_ID) TokenAndListParam id,
-	        @OptionalParam(name = "_lastUpdated") DateRangeParam lastUpdated, @Sort SortSpec sort) {
+	        @OptionalParam(name = "_lastUpdated") DateRangeParam lastUpdated, @Sort SortSpec sort,
+			@IncludeParam(allow = { "DiagnosticReport:encounter", "DiagnosticReport:patient", "DiagnosticReport:result" }) HashSet<Include> theIncludes) {
 		if (patientReference == null) {
 			patientReference = subjectReference;
 		}
+
+		if (CollectionUtils.isEmpty(theIncludes)) {
+			theIncludes = null;
+		}
+
 		return service.searchForDiagnosticReports(encounterReference, patientReference, issueDate, code, id, lastUpdated,
-		    sort);
+		    sort, theIncludes);
 	}
 }

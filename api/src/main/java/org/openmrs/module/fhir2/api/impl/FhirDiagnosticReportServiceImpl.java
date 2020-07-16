@@ -9,6 +9,9 @@
  */
 package org.openmrs.module.fhir2.api.impl;
 
+import java.util.HashSet;
+
+import ca.uhn.fhir.model.api.Include;
 import ca.uhn.fhir.rest.api.SortSpec;
 import ca.uhn.fhir.rest.api.server.IBundleProvider;
 import ca.uhn.fhir.rest.param.DateRangeParam;
@@ -51,7 +54,7 @@ public class FhirDiagnosticReportServiceImpl extends BaseFhirService<DiagnosticR
 	@Override
 	public IBundleProvider searchForDiagnosticReports(ReferenceAndListParam encounterReference,
 	        ReferenceAndListParam patientReference, DateRangeParam issueDate, TokenAndListParam code, TokenAndListParam id,
-	        DateRangeParam lastUpdated, SortSpec sort) {
+	        DateRangeParam lastUpdated, SortSpec sort, HashSet<Include> theIncludes) {
 		
 		SearchParameterMap theParams = new SearchParameterMap()
 		        .addParameter(FhirConstants.ENCOUNTER_REFERENCE_SEARCH_HANDLER, encounterReference)
@@ -60,6 +63,7 @@ public class FhirDiagnosticReportServiceImpl extends BaseFhirService<DiagnosticR
 		        .addParameter(FhirConstants.CODED_SEARCH_HANDLER, code)
 		        .addParameter(FhirConstants.COMMON_SEARCH_HANDLER, FhirConstants.ID_PROPERTY, id)
 		        .addParameter(FhirConstants.COMMON_SEARCH_HANDLER, FhirConstants.LAST_UPDATED_PROPERTY, lastUpdated)
+				.addParameter(FhirConstants.INCLUDE_SEARCH_HANDLER, theIncludes)
 		        .setSortSpec(sort);
 		
 		return searchQuery.getQueryResults(theParams, dao, translator, searchQueryInclude);

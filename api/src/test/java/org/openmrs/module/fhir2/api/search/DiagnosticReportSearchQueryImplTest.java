@@ -10,18 +10,25 @@
 package org.openmrs.module.fhir2.api.search;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
+import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.hasProperty;
+import static org.hamcrest.Matchers.instanceOf;
+import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import ca.uhn.fhir.model.api.Include;
 import ca.uhn.fhir.rest.api.SortOrderEnum;
 import ca.uhn.fhir.rest.api.SortSpec;
 import ca.uhn.fhir.rest.api.server.IBundleProvider;
@@ -35,6 +42,8 @@ import ca.uhn.fhir.rest.param.TokenOrListParam;
 import ca.uhn.fhir.rest.param.TokenParam;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.DiagnosticReport;
+import org.hl7.fhir.r4.model.Encounter;
+import org.hl7.fhir.r4.model.Observation;
 import org.hl7.fhir.r4.model.Patient;
 import org.junit.Before;
 import org.junit.Test;
@@ -769,6 +778,106 @@ public class DiagnosticReportSearchQueryImplTest extends BaseModuleContextSensit
 		
 		assertThat(results, notNullValue());
 		assertThat(resultList, empty());
+	}
+
+	@Test
+	public void searchForDiagnosticReports_shouldAddNotNullEncounterToReturnedResults() {
+		TokenAndListParam uuid = new TokenAndListParam().addAnd(new TokenParam(DIAGNOSTIC_REPORT_UUID));
+		HashSet<Include> theIncludes = new HashSet<>();
+		Include include = new Include("DiagnosticReport:encounter");
+		theIncludes.add(include);
+
+		SearchParameterMap theParams = new SearchParameterMap()
+				.addParameter(FhirConstants.COMMON_SEARCH_HANDLER, FhirConstants.ID_PROPERTY, uuid)
+				.addParameter(FhirConstants.INCLUDE_SEARCH_HANDLER, theIncludes);
+
+		IBundleProvider results = search(theParams);
+		assertThat(results.size(), equalTo(1));
+
+		List<IBaseResource> resultList = get(results);
+
+		assertThat(results, notNullValue());
+		assertThat(resultList.size(), equalTo(2)); // included resource added as part of the result list
+
+		DiagnosticReport returnedDiagnosticReport = (DiagnosticReport) resultList.iterator().next();
+		assertThat(resultList, hasItem(allOf(is(instanceOf(Encounter.class)),
+				hasProperty("id", equalTo(returnedDiagnosticReport.getEncounter().getReferenceElement().getIdPart())))));
+	}
+
+	@Test
+	public void searchForDiagnosticReports_shouldAddNotNullPatientToReturnedResults() {
+		ReferenceAndListParam patientReference = new ReferenceAndListParam().addAnd(new ReferenceOrListParam()
+				.add(new ReferenceParam().setValue(PATIENT_IDENTIFIER).setChain(Patient.SP_IDENTIFIER)));
+
+		HashSet<Include> theIncludes = new HashSet<>();
+		Include include = new Include("DiagnosticReport:patient");
+		theIncludes.add(include);
+
+		SearchParameterMap theParams = new SearchParameterMap()
+				.addParameter(FhirConstants.PATIENT_REFERENCE_SEARCH_HANDLER, patientReference)
+				.addParameter(FhirConstants.INCLUDE_SEARCH_HANDLER, theIncludes);
+
+		IBundleProvider results = search(theParams);
+		assertThat(results.size(), equalTo(1));
+
+		List<IBaseResource> resultList = get(results);
+
+		assertThat(results, notNullValue());
+		assertThat(resultList.size(), equalTo(2)); // included resource added as part of the result list
+
+		DiagnosticReport returnedDiagnosticReport = (DiagnosticReport) resultList.iterator().next();
+		assertThat(resultList, hasItem(allOf(is(instanceOf(Patient.class)),
+				hasProperty("id", equalTo(returnedDiagnosticReport.getSubject().getReferenceElement().getIdPart())))));
+	}
+
+	@Test
+	public void searchForDiagnosticReports_shouldAddNotNullResultToReturnedResults() {
+		TokenAndListParam uuid = new TokenAndListParam().addAnd(new TokenParam(DIAGNOSTIC_REPORT_UUID));
+		HashSet<Include> theIncludes = new HashSet<>();
+		Include include = new Include("DiagnosticReport:result");
+		theIncludes.add(include);
+
+		SearchParameterMap theParams = new SearchParameterMap()
+				.addParameter(FhirConstants.COMMON_SEARCH_HANDLER, FhirConstants.ID_PROPERTY, uuid)
+				.addParameter(FhirConstants.INCLUDE_SEARCH_HANDLER, theIncludes);
+
+		IBundleProvider results = search(theParams);
+		assertThat(results.size(), equalTo(1));
+
+		List<IBaseResource> resultList = get(results);
+
+		assertThat(results, notNullValue());
+		assertThat(resultList.size(), equalTo(2)); // included resource added as part of the result list
+
+		DiagnosticReport returnedDiagnosticReport = (DiagnosticReport) resultList.iterator().next();
+		assertThat(resultList, hasItem(allOf(is(instanceOf(Observation.class)),
+				hasProperty("id", equalTo(returnedDiagnosticReport.getResultFirstRep().getReferenceElement().getIdPart())))));
+	}
+
+	@Test
+	public void searchForDiagnosticReports_shouldHandleMultipleIncludes() {
+		TokenAndListParam uuid = new TokenAndListParam().addAnd(new TokenParam(DIAGNOSTIC_REPORT_UUID));
+		Include includeResult = new Include("DiagnosticReport:result");
+		Include includeEncounter = new Include("DiagnosticReport:encounter");
+		HashSet<Include> theIncludes = new HashSet<>(Arrays.asList(includeEncounter, includeResult));
+
+		SearchParameterMap theParams = new SearchParameterMap()
+				.addParameter(FhirConstants.COMMON_SEARCH_HANDLER, FhirConstants.ID_PROPERTY, uuid)
+				.addParameter(FhirConstants.INCLUDE_SEARCH_HANDLER, theIncludes);
+
+		IBundleProvider results = search(theParams);
+		assertThat(results.size(), equalTo(1));
+
+		List<IBaseResource> resultList = get(results);
+
+		assertThat(results, notNullValue());
+		assertThat(resultList.size(), equalTo(3)); // included resources (encounter + result) added as part of the result list
+
+		DiagnosticReport returnedDiagnosticReport = (DiagnosticReport) resultList.iterator().next();
+		assertThat(resultList, hasItem(allOf(is(instanceOf(Observation.class)),
+				hasProperty("id", equalTo(returnedDiagnosticReport.getResultFirstRep().getReferenceElement().getIdPart())))));
+		assertThat(resultList, hasItem(allOf(is(instanceOf(Encounter.class)),
+				hasProperty("id", equalTo(returnedDiagnosticReport.getEncounter().getReferenceElement().getIdPart())))));
 	}
 	
 	@Test
