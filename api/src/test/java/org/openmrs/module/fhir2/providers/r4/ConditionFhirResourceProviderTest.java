@@ -21,8 +21,10 @@ import static org.hamcrest.Matchers.not;
 import static org.mockito.Mockito.when;
 
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 
+import ca.uhn.fhir.model.api.Include;
 import ca.uhn.fhir.rest.api.MethodOutcome;
 import ca.uhn.fhir.rest.api.SortSpec;
 import ca.uhn.fhir.rest.api.server.IBundleProvider;
@@ -174,11 +176,14 @@ public class ConditionFhirResourceProviderTest extends BaseFhirProvenanceResourc
 		
 		SortSpec sort = new SortSpec("sort param");
 		
+		HashSet<Include> includes = new HashSet<>();
+		
 		when(conditionService.searchConditions(patientReference, codeList, clinicalList, onsetDate, onsetAge, recordDate,
-		    uuid, lastUpdated, sort)).thenReturn(new MockIBundleProvider<>(Collections.singletonList(condition), 10, 1));
+		    uuid, lastUpdated, sort, null))
+		            .thenReturn(new MockIBundleProvider<>(Collections.singletonList(condition), 10, 1));
 		
 		IBundleProvider result = resourceProvider.searchConditions(patientReference, subjectReference, codeList,
-		    clinicalList, onsetDate, onsetAge, recordDate, uuid, lastUpdated, sort);
+		    clinicalList, onsetDate, onsetAge, recordDate, uuid, lastUpdated, sort, includes);
 		
 		List<IBaseResource> resultList = get(result);
 		
@@ -212,11 +217,14 @@ public class ConditionFhirResourceProviderTest extends BaseFhirProvenanceResourc
 		
 		SortSpec sort = new SortSpec("sort param");
 		
+		HashSet<Include> includes = new HashSet<>();
+		
 		when(conditionService.searchConditions(subjectReference, codeList, clinicalList, onsetDate, onsetAge, recordDate,
-		    uuid, lastUpdated, sort)).thenReturn(new MockIBundleProvider<>(Collections.singletonList(condition), 10, 1));
+		    uuid, lastUpdated, sort, null))
+		            .thenReturn(new MockIBundleProvider<>(Collections.singletonList(condition), 10, 1));
 		
 		IBundleProvider result = resourceProvider.searchConditions(subjectReference, subjectReference, codeList,
-		    clinicalList, onsetDate, onsetAge, recordDate, uuid, lastUpdated, sort);
+		    clinicalList, onsetDate, onsetAge, recordDate, uuid, lastUpdated, sort, includes);
 		
 		List<IBaseResource> resultList = get(result);
 		

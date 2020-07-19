@@ -11,11 +11,14 @@ package org.openmrs.module.fhir2.providers.r3;
 
 import javax.validation.constraints.NotNull;
 
+import java.util.HashSet;
 import java.util.List;
 
+import ca.uhn.fhir.model.api.Include;
 import ca.uhn.fhir.rest.annotation.Create;
 import ca.uhn.fhir.rest.annotation.History;
 import ca.uhn.fhir.rest.annotation.IdParam;
+import ca.uhn.fhir.rest.annotation.IncludeParam;
 import ca.uhn.fhir.rest.annotation.OptionalParam;
 import ca.uhn.fhir.rest.annotation.Read;
 import ca.uhn.fhir.rest.annotation.ResourceParam;
@@ -32,6 +35,7 @@ import ca.uhn.fhir.rest.server.IResourceProvider;
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
 import lombok.AccessLevel;
 import lombok.Setter;
+import org.apache.commons.collections.CollectionUtils;
 import org.hl7.fhir.convertors.conv30_40.Condition30_40;
 import org.hl7.fhir.dstu3.model.Condition;
 import org.hl7.fhir.dstu3.model.IdType;
@@ -96,12 +100,17 @@ public class ConditionFhirResourceProvider implements IResourceProvider {
 	        @OptionalParam(name = Condition.SP_ONSET_AGE) QuantityAndListParam onsetAge,
 	        @OptionalParam(name = Condition.SP_ASSERTED_DATE) DateRangeParam recordedDate,
 	        @OptionalParam(name = Condition.SP_RES_ID) TokenAndListParam id,
-	        @OptionalParam(name = "_lastUpdated") DateRangeParam lastUpdated, @Sort SortSpec sort) {
+	        @OptionalParam(name = "_lastUpdated") DateRangeParam lastUpdated, @Sort SortSpec sort,
+	        @IncludeParam(allow = { "Condition:" + Condition.SP_PATIENT }) HashSet<Include> includes) {
 		if (patientParam == null) {
 			patientParam = subjectParam;
 		}
 		
+		if (CollectionUtils.isEmpty(includes)) {
+			includes = null;
+		}
+		
 		return new SearchQueryBundleProviderR3Wrapper(conditionService.searchConditions(patientParam, code, clinicalStatus,
-		    onsetDate, onsetAge, recordedDate, id, lastUpdated, sort));
+		    onsetDate, onsetAge, recordedDate, id, lastUpdated, sort, includes));
 	}
 }
