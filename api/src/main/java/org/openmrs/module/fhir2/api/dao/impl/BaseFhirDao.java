@@ -16,10 +16,13 @@ import static org.hibernate.criterion.Restrictions.isNull;
 import static org.hibernate.criterion.Restrictions.or;
 import static org.hibernate.criterion.Subqueries.propertyIn;
 
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import ca.uhn.fhir.rest.param.DateRangeParam;
@@ -94,6 +97,21 @@ public abstract class BaseFhirDao<T extends OpenmrsObject & Auditable> extends B
 		}
 		
 		return result;
+	}
+	
+	@Override
+	@Transactional(readOnly = true)
+	@SuppressWarnings("unchecked")
+	public List<T> get(Collection<String> distinctUUIDs) {
+		List<T> results = sessionFactory.getCurrentSession().createCriteria(typeToken.getRawType())
+		        .add(in("uuid", distinctUUIDs)).list();
+		
+		if (isVoidable || isRetireable) {
+			return results.stream().filter(Objects::nonNull).filter(result -> !isVoided(result) && !isRetired(result))
+			        .collect(Collectors.toList());
+		}
+		
+		return results;
 	}
 	
 	@Override

@@ -12,6 +12,7 @@ package org.openmrs.module.fhir2.api.dao;
 import javax.validation.constraints.NotNull;
 
 import java.io.Serializable;
+import java.util.Collection;
 import java.util.List;
 
 import org.openmrs.Auditable;
@@ -24,6 +25,8 @@ import org.openmrs.module.fhir2.api.search.param.SearchParameterMap;
 public interface FhirDao<T extends OpenmrsObject & Auditable> extends Serializable {
 	
 	T get(@NotNull String uuid);
+	
+	List<T> get(@NotNull Collection<String> distinctUUIDs);
 	
 	T createOrUpdate(T newEntry);
 	
