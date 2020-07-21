@@ -11,9 +11,13 @@ package org.openmrs.module.fhir2.providers.r4;
 
 import javax.validation.constraints.NotNull;
 
+import java.util.HashSet;
+
+import ca.uhn.fhir.model.api.Include;
 import ca.uhn.fhir.rest.annotation.Create;
 import ca.uhn.fhir.rest.annotation.Delete;
 import ca.uhn.fhir.rest.annotation.IdParam;
+import ca.uhn.fhir.rest.annotation.IncludeParam;
 import ca.uhn.fhir.rest.annotation.OptionalParam;
 import ca.uhn.fhir.rest.annotation.Read;
 import ca.uhn.fhir.rest.annotation.ResourceParam;
@@ -29,6 +33,7 @@ import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
 import lombok.AccessLevel;
 import lombok.Setter;
+import org.apache.commons.collections.CollectionUtils;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Encounter;
 import org.hl7.fhir.r4.model.IdType;
@@ -110,12 +115,19 @@ public class ServiceRequestFhirResourceProvider implements IResourceProvider {
 	                Practitioner.SP_NAME }, targetTypes = Practitioner.class) ReferenceAndListParam participantReference,
 	        @OptionalParam(name = ServiceRequest.SP_OCCURRENCE) DateRangeParam occurrence,
 	        @OptionalParam(name = ServiceRequest.SP_RES_ID) TokenAndListParam uuid,
-	        @OptionalParam(name = "_lastUpdated") DateRangeParam lastUpdated) {
+	        @OptionalParam(name = "_lastUpdated") DateRangeParam lastUpdated,
+	        @IncludeParam(allow = { "ServiceRequest:" + ServiceRequest.SP_PATIENT,
+	                "ServiceRequest:" + ServiceRequest.SP_REQUESTER,
+	                "ServiceRequest:" + ServiceRequest.SP_ENCOUNTER }) HashSet<Include> includes) {
 		if (patientReference == null) {
 			patientReference = subjectReference;
 		}
 		
+		if (CollectionUtils.isEmpty(includes)) {
+			includes = null;
+		}
+		
 		return serviceRequestService.searchForServiceRequests(patientReference, code, encounterReference,
-		    participantReference, occurrence, uuid, lastUpdated);
+		    participantReference, occurrence, uuid, lastUpdated, includes);
 	}
 }

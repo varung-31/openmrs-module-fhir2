@@ -121,6 +121,8 @@ public class FhirConstants {
 	
 	public static final String MEDICATION_REQUEST = "MedicationRequest";
 	
+	public static final String PROCEDURE_REQUEST = "ProcedureRequest";
+	
 	public static final String TASK = "Task";
 	
 	public static final String MEDICATION = "Medication";

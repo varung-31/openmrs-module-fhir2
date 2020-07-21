@@ -11,9 +11,13 @@ package org.openmrs.module.fhir2.providers.r3;
 
 import javax.validation.constraints.NotNull;
 
+import java.util.HashSet;
+
+import ca.uhn.fhir.model.api.Include;
 import ca.uhn.fhir.rest.annotation.Create;
 import ca.uhn.fhir.rest.annotation.Delete;
 import ca.uhn.fhir.rest.annotation.IdParam;
+import ca.uhn.fhir.rest.annotation.IncludeParam;
 import ca.uhn.fhir.rest.annotation.OptionalParam;
 import ca.uhn.fhir.rest.annotation.Read;
 import ca.uhn.fhir.rest.annotation.ResourceParam;
@@ -29,6 +33,7 @@ import ca.uhn.fhir.rest.server.exceptions.InvalidRequestException;
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
 import lombok.AccessLevel;
 import lombok.Setter;
+import org.apache.commons.collections.CollectionUtils;
 import org.hl7.fhir.convertors.VersionConvertor_30_40;
 import org.hl7.fhir.dstu3.model.Encounter;
 import org.hl7.fhir.dstu3.model.IdType;
@@ -114,12 +119,19 @@ public class ProcedureRequestFhirResourceProvider implements IResourceProvider {
 	                Practitioner.SP_NAME }, targetTypes = Practitioner.class) ReferenceAndListParam participantReference,
 	        @OptionalParam(name = ProcedureRequest.SP_OCCURRENCE) DateRangeParam occurrence,
 	        @OptionalParam(name = ProcedureRequest.SP_RES_ID) TokenAndListParam uuid,
-	        @OptionalParam(name = "_lastUpdated") DateRangeParam lastUpdated) {
+	        @OptionalParam(name = "_lastUpdated") DateRangeParam lastUpdated,
+	        @IncludeParam(allow = { "ProcedureRequest:" + ProcedureRequest.SP_PATIENT,
+	                "ProcedureRequest:" + ProcedureRequest.SP_REQUESTER,
+	                "ProcedureRequest:" + ProcedureRequest.SP_ENCOUNTER }) HashSet<Include> includes) {
 		if (patientReference == null) {
 			patientReference = subjectReference;
 		}
 		
+		if (CollectionUtils.isEmpty(includes)) {
+			includes = null;
+		}
+		
 		return new SearchQueryBundleProviderR3Wrapper(serviceRequestService.searchForServiceRequests(patientReference, code,
-		    encounterReference, participantReference, occurrence, uuid, lastUpdated));
+		    encounterReference, participantReference, occurrence, uuid, lastUpdated, includes));
 	}
 }
