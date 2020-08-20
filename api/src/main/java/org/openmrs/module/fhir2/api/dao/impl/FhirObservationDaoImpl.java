@@ -18,7 +18,6 @@ import java.util.Optional;
 import ca.uhn.fhir.rest.param.DateRangeParam;
 import ca.uhn.fhir.rest.param.QuantityAndListParam;
 import ca.uhn.fhir.rest.param.ReferenceAndListParam;
-import ca.uhn.fhir.rest.param.ReferenceParam;
 import ca.uhn.fhir.rest.param.StringAndListParam;
 import ca.uhn.fhir.rest.param.TokenAndListParam;
 import ca.uhn.fhir.rest.param.TokenParam;
@@ -68,7 +67,7 @@ public class FhirObservationDaoImpl extends BaseFhirDao<Obs> implements FhirObse
 					break;
 				case FhirConstants.HAS_MEMBER_SEARCH_HANDLER:
 					entry.getValue().forEach(hasMemberReference -> handleHasMemberReference(criteria,
-					    (ReferenceParam) hasMemberReference.getParam()));
+					    (ReferenceAndListParam) hasMemberReference.getParam()));
 					break;
 				case FhirConstants.QUANTITY_SEARCH_HANDLER:
 					entry.getValue().forEach(
@@ -92,21 +91,31 @@ public class FhirObservationDaoImpl extends BaseFhirDao<Obs> implements FhirObse
 		return super.handleLastUpdatedImmutable(param);
 	}
 	
-	private void handleHasMemberReference(Criteria criteria, ReferenceParam hasMemberReference) {
+	private void handleHasMemberReference(Criteria criteria, ReferenceAndListParam hasMemberReference) {
 		if (hasMemberReference != null) {
-			criteria.createAlias("groupMembers", "gm");
-			
-			switch (hasMemberReference.getChain()) {
-				case Observation.SP_CODE:
-					TokenAndListParam code = new TokenAndListParam()
-					        .addAnd(new TokenParam().setValue(hasMemberReference.getValue()));
-					criteria.createAlias("gm.concept", "c");
-					handleCodeableConcept(criteria, code, "c", "cm", "crt").ifPresent(criteria::add);
-					break;
-				case "":
-					criteria.add(eq("gm.uuid", hasMemberReference.getIdPart()));
-					break;
+			if (lacksAlias(criteria, "gm")) {
+				criteria.createAlias("groupMembers", "gm");
 			}
+			
+			handleAndListParam(hasMemberReference, hasMemberRef -> {
+				if (hasMemberRef.getChain() != null) {
+					switch (hasMemberRef.getChain()) {
+						case Observation.SP_CODE:
+							TokenAndListParam code = new TokenAndListParam()
+							        .addAnd(new TokenParam().setValue(hasMemberRef.getValue()));
+							
+							if (lacksAlias(criteria, "c")) {
+								criteria.createAlias("gm.concept", "c");
+							}
+							
+							return handleCodeableConcept(criteria, code, "c", "cm", "crt");
+					}
+				} else {
+					return Optional.of(eq("gm.uuid", hasMemberRef.getIdPart()));
+				}
+				
+				return Optional.empty();
+			}).ifPresent(criteria::add);
 		}
 	}
 	
